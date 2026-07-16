@@ -1,31 +1,270 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xhub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0c0c0c; color: #e0e0e0; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xhub</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; font-family:-apple-system, system-ui, sans-serif; }
+  body { background:#151311; color:#faf7f2; display:flex; flex-direction:column; }
+  .screen { display:none; flex:1; min-height:0; flex-direction:column; }
+  .screen.active { display:flex; }
+  .topbar { display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; }
+  .topbar button { background:none; border:1px solid #3a352e; color:#c9c2b6; padding:8px 16px; border-radius:6px; font-size:0.85rem; font-weight:600; }
+  .topbar button.primary { background:#c9603f; border:none; color:#fff; }
+  #hero { align-items:center; justify-content:center; text-align:center; padding:20px; }
+  #hero .logo { display:flex; align-items:center; gap:12px; margin-bottom:14px; justify-content:center; }
+  #hero .logo span.emoji { font-size:2.4rem; }
+  #hero h1 { font-size:2.6rem; }
+  #hero p { color:#a89f92; font-size:1rem; margin-top:8px; }
+  .cta { margin-top:26px; display:flex; gap:12px; }
+  .cta button { padding:12px 22px; border-radius:8px; font-weight:600; font-size:0.9rem; border:none; }
+  .cta .primary { background:#c9603f; color:#fff; }
+  #authScreen { align-items:center; justify-content:center; padding:20px; }
+  #authScreen .box { width:100%; max-width:320px; text-align:center; }
+  #authScreen .logo { font-size:1.8rem; margin-bottom:6px; }
+  #authScreen h2 { font-size:1.3rem; margin-bottom:20px; }
+  #authScreen input { width:100%; padding:12px 14px; margin-bottom:12px; border-radius:8px; border:1px solid #3a352e; background:#1e1c19; color:#faf7f2; font-size:0.9rem; }
+  #authScreen button.submit { width:100%; padding:12px; border-radius:8px; border:none; background:#c9603f; color:#fff; font-weight:600; font-size:0.95rem; margin-top:6px; }
+  #authScreen .switch { margin-top:16px; font-size:0.82rem; color:#a89f92; }
+  #authScreen .switch a { color:#e8956b; }
+  #authScreen .back { margin-top:22px; font-size:0.8rem; color:#77706d; }
+  #authMsg { font-size:0.78rem; color:#e35b4d; margin-top:8px; min-height:16px; }
+  #dashScreen { padding:16px; overflow-y:auto; }
+  .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .dash-header button { background:#c9603f; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-size:0.82rem; font-weight:600; }
+  .repo-card { background:#1e1c19; border:1px solid #2e2b26; border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .repo-card b { color:#e8956b; }
+  .repo-card p { font-size:0.78rem; color:#a89f92; margin-top:4px; }
+  .repo-topbar { background:#1e1c19; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #2e2b26; }
+  .repo-topbar .name { font-weight:700; color:#e8956b; font-size:0.95rem; }
+  .repo-topbar .dots { position:relative; }
+  .repo-topbar .dots button { background:none; border:none; color:#c9c2b6; font-size:1.1rem; }
+  .dots-menu { display:none; position:absolute; right:0; top:26px; background:#2a2723; border:1px solid #3a352e; border-radius:8px; overflow:hidden; z-index:5; }
+  .dots-menu.show { display:block; }
+  .dots-menu div { padding:10px 16px; font-size:0.82rem; white-space:nowrap; color:#faf7f2; }
+  .dots-menu div.danger { color:#e35b4d; }
+  .repo-tabs { display:flex; background:#171512; border-bottom:1px solid #2e2b26; padding:0 10px; overflow-x:auto; }
+  .repo-tabs div { padding:9px 10px; font-size:0.8rem; color:#8f887c; border-bottom:2px solid transparent; white-space:nowrap; }
+  .repo-tabs div.active { color:#e8956b; border-color:#c9603f; font-weight:600; }
+  .repo-body { flex:1; display:flex; min-height:0; }
+  .file-sidebar { width:120px; background:#171512; border-right:1px solid #2e2b26; padding:8px; display:flex; flex-direction:column; }
+  .file-item { padding:6px 8px; border-radius:6px; font-size:0.8rem; margin-bottom:2px; color:#d8d2c6; cursor:pointer; }
+  .file-item.active { background:#2e2117; color:#e8956b; font-weight:600; }
+  .file-sidebar button { margin-top:auto; background:none; border:1px solid #3a352e; color:#e8956b; padding:6px; border-radius:6px; font-size:0.72rem; }
+  .editor-main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .CodeMirror { flex:1; font-size:13px; }
+  .run-row { background:#1e1c19; padding:8px; display:flex; gap:8px; }
+  .run-row button { background:#c9603f; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:600; font-size:0.8rem; }
+  #output { background:#0f0e0c; color:#eee8dc; padding:8px 10px; font-family:monospace; font-size:0.75rem; max-height:90px; overflow-y:auto; white-space:pre-wrap; }
+</style>
 </head>
-<body class="h-full flex flex-col items-center justify-center font-sans">
+<body>
 
-    <!-- Welcome Section -->
-    <div class="text-center">
-        <h1 class="text-6xl font-bold mb-4 flex items-center justify-center gap-3">
-            <span>🌿</span> Xhub
-        </h1>
-        <p class="text-gray-400 text-lg">A free coding space, built from a phone.</p>
+<div class="screen active" id="hero">
+  <div class="topbar">
+    <button onclick="show('authScreen'); setAuth('login')">Log in</button>
+    <button class="primary" onclick="show('authScreen'); setAuth('signup')">Sign up</button>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;">
+    <div class="logo"><span class="emoji">🌿</span><h1>Xhub</h1></div>
+    <p>A free coding space, built from a phone.</p>
+    <div class="cta"><button class="primary" onclick="show('authScreen'); setAuth('signup')">Get started</button></div>
+  </div>
+</div>
+
+<div class="screen" id="authScreen">
+  <div class="box">
+    <div class="logo">🌿</div>
+    <h2 id="authTitle">Log in to Xhub</h2>
+    <input type="text" id="authName" placeholder="Username">
+    <input type="password" id="authPass" placeholder="Password">
+    <button class="submit" onclick="doAuth()">Log in</button>
+    <div id="authMsg"></div>
+    <div class="switch" id="authSwitch"></div>
+    <div class="back" onclick="show('hero')">← Back to home</div>
+  </div>
+</div>
+
+<div class="screen" id="dashScreen">
+  <div class="dash-header"><h2>Your repositories</h2><button onclick="newRepo()">+ New repo</button></div>
+  <div id="repoList"></div>
+</div>
+
+<div class="screen" id="repoScreen">
+  <div class="repo-topbar">
+    <span class="name" id="repoName">Xhub</span>
+    <div class="dots">
+      <button onclick="toggleDots()">⋮</button>
+      <div class="dots-menu" id="dotsMenu">
+        <div onclick="show('dashScreen'); renderRepos()">← Back to repos</div>
+        <div class="danger" onclick="deleteRepo()">🗑 Delete repository</div>
+      </div>
     </div>
-
-    <!-- Navigation Placeholder (Will be our 3-condition menu) -->
-    <div class="mt-12 flex gap-6 text-sm text-gray-500">
-        <button class="hover:text-white transition">Explore</button>
-        <button class="hover:text-white transition">Login</button>
-        <button class="hover:text-white transition">Docs</button>
+  </div>
+  <div class="repo-tabs"><div class="active">Code</div><div>Issues</div><div>Actions</div><div>Settings</div></div>
+  <div class="repo-body">
+    <div class="file-sidebar">
+      <div id="fileList"></div>
+      <button onclick="newFile()">+ New file</button>
     </div>
+    <div class="editor-main">
+      <textarea id="code"></textarea>
+      <div class="run-row"><button onclick="runCode()">▶ Run</button><button onclick="saveFile()">💾 Save</button></div>
+      <div id="output">Output will appear here...</div>
+    </div>
+  </div>
+</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script>
+  let authMode = 'login';
+  let editor;
+  let currentRepoId = null;
+  let currentFileName = null;
+  let currentUser = null;
+
+  function db() {
+    return JSON.parse(localStorage.getItem('xhub_db') || '{"users":{},"repos":[]}');
+  }
+  function saveDb(d) {
+    localStorage.setItem('xhub_db', JSON.stringify(d));
+  }
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function setAuth(type) {
+    authMode = type;
+    document.getElementById('authMsg').textContent = '';
+    document.getElementById('authTitle').textContent = type === 'login' ? 'Log in to Xhub' : 'Create your Xhub account';
+    document.querySelector('#authScreen .submit').textContent = type === 'login' ? 'Log in' : 'Sign up';
+    document.getElementById('authSwitch').innerHTML = type === 'login'
+      ? 'Don\'t have an account? <a onclick="setAuth(\'signup\')">Sign up</a>'
+      : 'Already have an account? <a onclick="setAuth(\'login\')">Log in</a>';
+  }
+
+  function doAuth() {
+    const name = document.getElementById('authName').value.trim();
+    const pass = document.getElementById('authPass').value;
+    const msg = document.getElementById('authMsg');
+    if (!name || !pass) { msg.textContent = 'Enter username and password.'; return; }
+    const d = db();
+    if (authMode === 'signup') {
+      if (d.users[name]) { msg.textContent = 'Username already taken.'; return; }
+      d.users[name] = { pass };
+      saveDb(d);
+    } else {
+      if (!d.users[name] || d.users[name].pass !== pass) { msg.textContent = 'Wrong username or password.'; return; }
+    }
+    currentUser = name;
+    msg.textContent = '';
+    show('dashScreen');
+    renderRepos();
+  }
+
+  function renderRepos() {
+    const d = db();
+    const list = document.getElementById('repoList');
+    const mine = d.repos.filter(r => r.owner === currentUser);
+    list.innerHTML = '';
+    if (!mine.length) { list.innerHTML = '<p style="color:#a89f92;font-size:0.85rem;">No repos yet. Tap + New repo.</p>'; return; }
+    mine.forEach(repo => {
+      const div = document.createElement('div');
+      div.className = 'repo-card';
+      div.innerHTML = '<b>' + repo.name + '</b><p>by ' + repo.owner + '</p>';
+      div.onclick = () => openRepo(repo.id);
+      list.appendChild(div);
+    });
+  }
+
+  function newRepo() {
+    const name = prompt('Repository name:');
+    if (!name) return;
+    const d = db();
+    const id = 'r' + Date.now();
+    d.repos.push({ id, name, owner: currentUser, files: { 'main.js': 'console.log("Hello from Xhub!");' } });
+    saveDb(d);
+    renderRepos();
+  }
+
+  function openRepo(id) {
+    currentRepoId = id;
+    const d = db();
+    const repo = d.repos.find(r => r.id === id);
+    document.getElementById('repoName').textContent = repo.name;
+    show('repoScreen');
+    if (!editor) {
+      editor = CodeMirror.fromTextArea(document.getElementById('code'), { mode: 'javascript', lineNumbers: true, tabSize: 2 });
+    }
+    renderFileList();
+    const firstFile = Object.keys(repo.files)[0];
+    openFile(firstFile);
+  }
+
+  function renderFileList() {
+    const d = db();
+    const repo = d.repos.find(r => r.id === currentRepoId);
+    const list = document.getElementById('fileList');
+    list.innerHTML = '';
+    Object.keys(repo.files).forEach(name => {
+      const div = document.createElement('div');
+      div.className = 'file-item' + (name === currentFileName ? ' active' : '');
+      div.textContent = name;
+      div.onclick = () => openFile(name);
+      list.appendChild(div);
+    });
+  }
+
+  function openFile(name) {
+    currentFileName = name;
+    const d = db();
+    const repo = d.repos.find(r => r.id === currentRepoId);
+    editor.setValue(repo.files[name] || '');
+    renderFileList();
+  }
+
+  function newFile() {
+    const name = prompt('File name:');
+    if (!name) return;
+    const d = db();
+    const repo = d.repos.find(r => r.id === currentRepoId);
+    repo.files[name] = '';
+    saveDb(d);
+    openFile(name);
+  }
+
+  function saveFile() {
+    const d = db();
+    const repo = d.repos.find(r => r.id === currentRepoId);
+    repo.files[currentFileName] = editor.getValue();
+    saveDb(d);
+    document.getElementById('output').textContent = 'Saved ✓';
+  }
+
+  function toggleDots() { document.getElementById('dotsMenu').classList.toggle('show'); }
+
+  function deleteRepo() {
+    if (!confirm('Delete this repository?')) return;
+    const d = db();
+    d.repos = d.repos.filter(r => r.id !== currentRepoId);
+    saveDb(d);
+    show('dashScreen');
+    renderRepos();
+  }
+
+  function runCode() {
+    const output = document.getElementById('output');
+    output.textContent = '';
+    const log = (...args) => { output.textContent += args.join(' ') + '\n'; };
+    try { (new Function('console', editor.getValue()))({ log }); }
+    catch (err) { output.textContent = 'Error: ' + err.message; }
+  }
+</script>
 </body>
-</html>
-
+        </html>
